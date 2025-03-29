@@ -212,7 +212,26 @@ export function WebhookManagement() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-8 text-gray-500">Loading webhooks...</div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 border border-gray-200 rounded-lg animate-pulse">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-3 bg-gray-100 rounded w-32"></div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-5 bg-gray-200 rounded-full"></div>
+                    <div className="w-6 h-6 rounded-full bg-gray-200"></div>
+                  </div>
+                </div>
+                <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                  <div className="h-3 bg-gray-200 rounded w-20 mb-2"></div>
+                  <div className="h-4 bg-gray-100 rounded w-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : webhooks?.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p>No webhooks configured yet. Add a webhook to get started.</p>
@@ -223,37 +242,43 @@ export function WebhookManagement() {
               {webhooks?.map((webhook) => (
               <div
                 key={webhook.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                className="flex flex-col p-4 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow"
               >
-                <div>
-                  <h3 className="font-medium">{webhook.name}</h3>
-                  <div className="flex items-center mt-1">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded mr-2">URL</span>
-                    <div className="text-sm font-mono text-blue-600 break-all">{webhook.url}</div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-[#2D3748]">{webhook.name}</h3>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Created on {formatDate(webhook.createdAt)}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    Created on {formatDate(webhook.createdAt)}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={`webhook-active-${webhook.id}`}
+                        checked={webhook.active}
+                        onCheckedChange={() => handleToggleStatus(webhook)}
+                      />
+                      <Label htmlFor={`webhook-active-${webhook.id}`} className="text-sm">
+                        {webhook.active ? "Active" : "Inactive"}
+                      </Label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-gray-400 hover:text-red-600"
+                      onClick={() => deleteWebhookMutation(webhook.id)}
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`webhook-active-${webhook.id}`}
-                      checked={webhook.active}
-                      onCheckedChange={() => handleToggleStatus(webhook)}
-                    />
-                    <Label htmlFor={`webhook-active-${webhook.id}`} className="text-sm">
-                      {webhook.active ? "Active" : "Inactive"}
-                    </Label>
+                <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                  <div className="flex items-center">
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded mr-2 font-semibold">WEBHOOK URL</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-gray-400 hover:text-red-600"
-                    onClick={() => deleteWebhookMutation(webhook.id)}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
+                  <div className="text-sm font-mono text-blue-600 break-all mt-2 select-all p-2">
+                    {webhook.url}
+                  </div>
                 </div>
               </div>
             ))}

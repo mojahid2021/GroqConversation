@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createConversation } from "@/lib/groq-api";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { SmartSearch } from "@/components/search/smart-search";
 
 interface TopNavProps {
   onToggleSidebar: () => void;
@@ -47,6 +48,7 @@ export function TopNav({ onToggleSidebar, className }: TopNavProps) {
         </div>
         
         <div className="hidden md:flex items-center space-x-4">
+          <SmartSearch />
           <Button
             onClick={() => newChat()}
             disabled={isPending}
