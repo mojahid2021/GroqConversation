@@ -217,7 +217,7 @@ export function WebhookManagement() {
             <p>No webhooks configured yet. Add a webhook to get started.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
             {webhooks?.map((webhook) => (
               <div
                 key={webhook.id}
