@@ -36,12 +36,12 @@ export function Sidebar({ className }: SidebarProps) {
       
       <ScrollArea className="flex-1 px-3 py-2">
         <div className="space-y-1 py-2">
-          <Link href="/chat">
+          <Link href="/admin/chat">
             <Button
               variant="ghost"
               className={cn(
                 "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
-                location === "/chat" && "bg-[#4A5568] bg-opacity-60"
+                location === "/admin/chat" && "bg-[#4A5568] bg-opacity-60"
               )}
             >
               <MessageSquare className="mr-3 h-5 w-5" />
@@ -73,14 +73,14 @@ export function Sidebar({ className }: SidebarProps) {
                 conversations.map((conversation) => (
                   <Link 
                     key={conversation.id} 
-                    href={`/chat/${conversation.id}`}
+                    href={`/admin/chat/${conversation.id}`}
                   >
                     <Button
                       variant="ghost"
                       size="sm"
                       className={cn(
                         "w-full justify-start text-gray-300 hover:text-white hover:bg-[#4A5568] hover:bg-opacity-40",
-                        location === `/chat/${conversation.id}` && "bg-[#4A5568] bg-opacity-40 text-white"
+                        location === `/admin/chat/${conversation.id}` && "bg-[#4A5568] bg-opacity-40 text-white"
                       )}
                     >
                       {conversation.title.length > 25
@@ -95,12 +95,12 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
           )}
           
-          <Link href="/documents">
+          <Link href="/admin/documents">
             <Button
               variant="ghost"
               className={cn(
                 "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
-                location === "/documents" && "bg-[#4A5568] bg-opacity-60"
+                location === "/admin/documents" && "bg-[#4A5568] bg-opacity-60"
               )}
             >
               <FileText className="mr-3 h-5 w-5" />
@@ -108,12 +108,12 @@ export function Sidebar({ className }: SidebarProps) {
             </Button>
           </Link>
           
-          <Link href="/analytics">
+          <Link href="/admin/analytics">
             <Button
               variant="ghost"
               className={cn(
                 "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
-                location === "/analytics" && "bg-[#4A5568] bg-opacity-60"
+                location === "/admin/analytics" && "bg-[#4A5568] bg-opacity-60"
               )}
             >
               <BarChart2 className="mr-3 h-5 w-5" />
@@ -121,12 +121,12 @@ export function Sidebar({ className }: SidebarProps) {
             </Button>
           </Link>
           
-          <Link href="/webhooks">
+          <Link href="/admin/webhooks">
             <Button
               variant="ghost"
               className={cn(
                 "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
-                location === "/webhooks" && "bg-[#4A5568] bg-opacity-60"
+                location === "/admin/webhooks" && "bg-[#4A5568] bg-opacity-60"
               )}
             >
               <Zap className="mr-3 h-5 w-5" />
@@ -134,12 +134,12 @@ export function Sidebar({ className }: SidebarProps) {
             </Button>
           </Link>
           
-          <Link href="/settings">
+          <Link href="/admin/settings">
             <Button
               variant="ghost"
               className={cn(
                 "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
-                location === "/settings" && "bg-[#4A5568] bg-opacity-60"
+                location === "/admin/settings" && "bg-[#4A5568] bg-opacity-60"
               )}
             >
               <Settings className="mr-3 h-5 w-5" />
