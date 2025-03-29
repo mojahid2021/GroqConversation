@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import pdfParse from "../lib/pdf-parse-wrapper";
+import crypto from "crypto";
 import {
   insertUserSchema,
   insertConversationSchema,
@@ -70,6 +71,460 @@ function calculateCost(tokens: number): number {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Root route and API docs
+  app.get('/', (_req, res) => {
+    res.send('AI Chatbot Platform API is running. Visit /api/docs for API documentation.');
+  });
+  
+  // OpenAPI documentation
+  app.get('/api/docs', (_req, res) => {
+    const host = process.env.HOST_URL || `http://localhost:${process.env.PORT || 5000}`;
+    const openApiSpec = {
+      openapi: "3.0.0",
+      info: {
+        title: "AI Chatbot Platform API",
+        version: "1.0.0",
+        description: "API documentation for the AI Chatbot Platform"
+      },
+      servers: [
+        {
+          url: host,
+          description: "API Server"
+        }
+      ],
+      paths: {
+        "/api/conversations": {
+          get: {
+            summary: "Get user conversations",
+            security: [{ bearerAuth: [] }],
+            responses: {
+              "200": {
+                description: "List of conversations",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "array",
+                      items: {
+                        $ref: "#/components/schemas/Conversation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          post: {
+            summary: "Create a new conversation",
+            security: [{ bearerAuth: [] }],
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/CreateConversation"
+                  }
+                }
+              }
+            },
+            responses: {
+              "201": {
+                description: "Created conversation",
+                content: {
+                  "application/json": {
+                    schema: {
+                      $ref: "#/components/schemas/Conversation"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/api/messages": {
+          get: {
+            summary: "Get messages by conversation ID",
+            security: [{ bearerAuth: [] }],
+            parameters: [
+              {
+                name: "conversationId",
+                in: "query",
+                required: true,
+                schema: {
+                  type: "integer"
+                }
+              }
+            ],
+            responses: {
+              "200": {
+                description: "List of messages",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "array",
+                      items: {
+                        $ref: "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          post: {
+            summary: "Create a new message",
+            security: [{ bearerAuth: [] }],
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/CreateMessage"
+                  }
+                }
+              }
+            },
+            responses: {
+              "201": {
+                description: "Created message",
+                content: {
+                  "application/json": {
+                    schema: {
+                      $ref: "#/components/schemas/Message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/api/documents": {
+          get: {
+            summary: "Get user documents",
+            security: [{ bearerAuth: [] }],
+            responses: {
+              "200": {
+                description: "List of documents",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "array",
+                      items: {
+                        $ref: "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/api/webhooks": {
+          get: {
+            summary: "Get user webhooks",
+            security: [{ bearerAuth: [] }],
+            responses: {
+              "200": {
+                description: "List of webhooks",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "array",
+                      items: {
+                        $ref: "#/components/schemas/Webhook"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          post: {
+            summary: "Create a new webhook",
+            security: [{ bearerAuth: [] }],
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/CreateWebhook"
+                  }
+                }
+              }
+            },
+            responses: {
+              "201": {
+                description: "Created webhook",
+                content: {
+                  "application/json": {
+                    schema: {
+                      $ref: "#/components/schemas/Webhook"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/api/chat": {
+          post: {
+            summary: "Process a chat request with the Groq API",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["messages"],
+                    properties: {
+                      messages: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          required: ["role", "content"],
+                          properties: {
+                            role: {
+                              type: "string",
+                              enum: ["system", "user", "assistant"]
+                            },
+                            content: {
+                              type: "string"
+                            }
+                          }
+                        }
+                      },
+                      model: {
+                        type: "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            responses: {
+              "200": {
+                description: "AI response",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        reply: {
+                          type: "string"
+                        },
+                        usage: {
+                          type: "object",
+                          properties: {
+                            promptTokens: {
+                              type: "integer"
+                            },
+                            completionTokens: {
+                              type: "integer"
+                            },
+                            totalTokens: {
+                              type: "integer"
+                            },
+                            cost: {
+                              type: "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/api/health": {
+          get: {
+            summary: "Health check endpoint",
+            responses: {
+              "200": {
+                description: "API server is healthy",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        status: {
+                          type: "string",
+                          example: "healthy"
+                        },
+                        timestamp: {
+                          type: "string",
+                          format: "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT"
+          }
+        },
+        schemas: {
+          Conversation: {
+            type: "object",
+            properties: {
+              id: {
+                type: "integer"
+              },
+              userId: {
+                type: "integer"
+              },
+              title: {
+                type: "string"
+              },
+              createdAt: {
+                type: "string",
+                format: "date-time"
+              },
+              updatedAt: {
+                type: "string",
+                format: "date-time"
+              }
+            }
+          },
+          CreateConversation: {
+            type: "object",
+            required: ["title"],
+            properties: {
+              title: {
+                type: "string"
+              }
+            }
+          },
+          Message: {
+            type: "object",
+            properties: {
+              id: {
+                type: "integer"
+              },
+              conversationId: {
+                type: "integer"
+              },
+              role: {
+                type: "string",
+                enum: ["user", "assistant", "system"]
+              },
+              content: {
+                type: "string"
+              },
+              createdAt: {
+                type: "string",
+                format: "date-time"
+              }
+            }
+          },
+          CreateMessage: {
+            type: "object",
+            required: ["conversationId", "role", "content"],
+            properties: {
+              conversationId: {
+                type: "integer"
+              },
+              role: {
+                type: "string",
+                enum: ["user", "assistant", "system"]
+              },
+              content: {
+                type: "string"
+              }
+            }
+          },
+          Document: {
+            type: "object",
+            properties: {
+              id: {
+                type: "integer"
+              },
+              userId: {
+                type: "integer"
+              },
+              name: {
+                type: "string"
+              },
+              content: {
+                type: "string"
+              },
+              type: {
+                type: "string"
+              },
+              size: {
+                type: "integer"
+              },
+              createdAt: {
+                type: "string",
+                format: "date-time"
+              }
+            }
+          },
+          Webhook: {
+            type: "object",
+            properties: {
+              id: {
+                type: "integer"
+              },
+              userId: {
+                type: "integer"
+              },
+              name: {
+                type: "string"
+              },
+              url: {
+                type: "string"
+              },
+              active: {
+                type: "boolean"
+              },
+              createdAt: {
+                type: "string",
+                format: "date-time"
+              }
+            }
+          },
+          CreateWebhook: {
+            type: "object",
+            required: ["name", "url"],
+            properties: {
+              name: {
+                type: "string"
+              },
+              url: {
+                type: "string"
+              },
+              active: {
+                type: "boolean",
+                default: true
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    res.json(openApiSpec);
+  });
+  
+  // Health check endpoint
+  app.get('/api/health', (_req, res) => {
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
 
   // Add user authentication middleware
   const authenticate = async (req: Request, res: Response, next: NextFunction) => {
@@ -475,6 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiKeys = await storage.getApiKeysByUserId(userId);
       return res.status(200).json(apiKeys);
     } catch (error) {
+      console.error("Error fetching API keys:", error);
       return res.status(500).json({ message: "Server error" });
     }
   });
@@ -482,11 +938,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/api-keys', authenticate, async (req, res) => {
     try {
       const userId = req.body.user.id;
-      const apiKeyData = insertApiKeySchema.parse({ ...req.body, userId });
+      // Generate a secure API key if not provided
+      const key = req.body.key || `sk-${crypto.randomUUID().replace(/-/g, '')}`;
+      const name = req.body.name || `API Key ${new Date().toLocaleDateString()}`;
+      
+      const apiKeyData = insertApiKeySchema.parse({ 
+        ...req.body, 
+        userId,
+        name,
+        key,
+        active: true
+      });
       
       const apiKey = await storage.createApiKey(apiKeyData);
+      
+      // Store the key securely
+      console.log(`API key created: ${apiKey.id} (${apiKey.name})`);
+      
       return res.status(201).json(apiKey);
     } catch (error) {
+      console.error("Error creating API key:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }

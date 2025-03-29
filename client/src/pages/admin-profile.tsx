@@ -1,10 +1,12 @@
 import React from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { UserAchievements } from '@/components/profile/user-achievements';
+import { SimplifiedBadgeProgress } from '@/components/achievement/simplified-badge-progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { User, Settings, Lock, Shield } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminProfilePage() {
   const { userId, isAuthenticated } = useAuth();
@@ -18,6 +20,8 @@ export default function AdminProfilePage() {
       </div>
     );
   }
+
+  const userIdNumber = userId ? parseInt(userId, 10) : 0;
 
   return (
     <div className="flex h-screen">
@@ -58,7 +62,18 @@ export default function AdminProfilePage() {
           
           {/* Main Content */}
           <div className="md:col-span-3">
-            <UserAchievements />
+            <Tabs defaultValue="achievements" className="w-full">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                <TabsTrigger value="badge-progress">Badge Progress</TabsTrigger>
+              </TabsList>
+              <TabsContent value="achievements">
+                <UserAchievements />
+              </TabsContent>
+              <TabsContent value="badge-progress">
+                <SimplifiedBadgeProgress userId={userIdNumber} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
