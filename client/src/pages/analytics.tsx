@@ -4,6 +4,7 @@ import { AnalyticsCards } from "@/components/dashboard/analytics-cards";
 import { UsageChart } from "@/components/dashboard/usage-chart";
 import { PricingDashboard } from "@/components/dashboard/pricing-dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,

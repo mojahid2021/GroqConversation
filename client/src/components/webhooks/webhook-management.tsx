@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Dialog, 
   DialogContent, 
@@ -223,28 +224,6 @@ export function WebhookManagement() {
               <div
                 key={webhook.id}
                 className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{webhook.name}</h3>
-                  <p className="text-sm text-gray-500 break-all">{webhook.url}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Created {format(new Date(webhook.createdAt), 'MMM d, yyyy')}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <Switch
-                    checked={webhook.active}
-                    onCheckedChange={() => handleToggleStatus(webhook)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-gray-500 hover:text-red-500"
-                    onClick={() => deleteWebhookMutation(webhook.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
               >
                 <div>
                   <h3 className="font-medium">{webhook.name}</h3>
