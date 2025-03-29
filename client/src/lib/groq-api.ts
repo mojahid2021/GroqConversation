@@ -121,15 +121,29 @@ export async function uploadDocument(file: File): Promise<Document> {
   const formData = new FormData();
   formData.append("file", file);
   
+  // Get the userId from localStorage for authentication
+  const userId = localStorage.getItem('userId');
+  
   const response = await fetch("/api/documents", {
     method: "POST",
+    headers: {
+      // Cannot include Content-Type with FormData as the browser sets it automatically
+      'user-id': userId || ''
+    },
     body: formData,
     credentials: "include",
   });
   
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to upload document");
+    let errorMessage = "Failed to upload document";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // If response cannot be parsed as JSON, use the statusText
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
   
   const data = await response.json();

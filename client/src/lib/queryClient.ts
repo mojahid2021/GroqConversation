@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, DefaultOptions } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,14 +7,25 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Enhanced API request to include user-id from localStorage
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const userId = localStorage.getItem('userId');
+  const headers: Record<string, string> = { 
+    ...(data ? { "Content-Type": "application/json" } : {})
+  };
+  
+  // Add authorization header if user is logged in
+  if (userId) {
+    headers['user-id'] = userId;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +40,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const userId = localStorage.getItem('userId');
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if user is logged in
+    if (userId) {
+      headers['user-id'] = userId;
+    }
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -41,17 +61,23 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
-    },
-    mutations: {
-      retry: false,
-    },
+// Configure caching options
+const queryOptions: DefaultOptions = {
+  queries: {
+    queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    // Enable caching with a stale time of 5 minutes (300000ms)
+    staleTime: 5 * 60 * 1000,
+    // Keep data cached for 1 hour even after it becomes inactive
+    gcTime: 60 * 60 * 1000,
+    retry: 1, // Retry failed queries once
   },
+  mutations: {
+    retry: false,
+  },
+};
+
+export const queryClient = new QueryClient({
+  defaultOptions: queryOptions,
 });
