@@ -16,6 +16,8 @@ import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import PublicChat from "@/pages/public-chat";
+import Profile from "@/pages/profile";
+import AdminProfile from "@/pages/admin-profile";
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" component={PublicChat} />
             <Route path="/admin/login" component={Login} />
+            <Route path="/profile" component={Profile} />
             
             {/* Protected Admin Routes - exact path matching */}
             <Route path="/admin/chat/:id">
@@ -58,6 +61,11 @@ function App() {
             <Route path="/admin/settings">
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/admin/profile">
+              <ProtectedRoute>
+                <AdminProfile />
               </ProtectedRoute>
             </Route>
             

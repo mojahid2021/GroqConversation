@@ -16,7 +16,10 @@ import {
   insertApiKeySchema,
   insertWebhookSchema,
   insertAnalyticsSchema,
-  insertSettingsSchema
+  insertSettingsSchema,
+  insertUserAchievementSchema,
+  insertUserBadgeSchema,
+  insertBadgeSchema
 } from "@shared/schema";
 
 // Setup file uploads
@@ -614,6 +617,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }
+  });
+
+  // Achievement and Badge Routes
+  app.get('/api/badges', authenticate, async (req, res) => {
+    try {
+      const badges = await storage.getAllBadges();
+      return res.status(200).json(badges);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get('/api/user-badges', authenticate, async (req, res) => {
+    try {
+      const userId = req.body.user.id;
+      const userBadges = await storage.getUserBadgesByUserId(userId);
+      
+      // Fetch the full badge details for each user badge
+      const fullBadges = await Promise.all(
+        userBadges.map(async (userBadge) => {
+          const badge = await storage.getBadge(userBadge.badgeId);
+          return {
+            ...userBadge,
+            badge
+          };
+        })
+      );
+      
+      return res.status(200).json(fullBadges);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get('/api/achievements', authenticate, async (req, res) => {
+    try {
+      const userId = req.body.user.id;
+      const achievements = await storage.getUserAchievementsByUserId(userId);
+      return res.status(200).json(achievements);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Utility endpoint to manually increment achievement progress
+  app.post('/api/achievements/increment', authenticate, async (req, res) => {
+    try {
+      const userId = req.body.user.id;
+      const { type, amount = 1 } = req.body;
+      
+      if (!type) {
+        return res.status(400).json({ message: "Achievement type is required" });
+      }
+      
+      const achievement = await storage.incrementUserAchievement(userId, type, amount);
+      
+      // Get all badges that the user has earned through this achievement
+      const userBadges = await storage.getUserBadgesByUserId(userId);
+      const badges = await storage.getAllBadges();
+      
+      const relevantBadges = badges.filter(badge => 
+        badge.criteria === type && 
+        achievement.count >= badge.threshold
+      );
+      
+      const earnedBadges = relevantBadges.filter(badge => 
+        userBadges.some(userBadge => userBadge.badgeId === badge.id)
+      );
+      
+      return res.status(200).json({
+        achievement,
+        earnedBadges
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Track achievements when creating conversations
+  app.post('/api/conversations', authenticate, async (req, res, next) => {
+    const origEnd = res.end;
+    res.end = function(chunk?: any, encoding?: any) {
+      // Check if the response status is 201 (Created)
+      if (res.statusCode === 201 && req.body && req.body.user) {
+        // After conversation is created, increment the achievement
+        storage.incrementUserAchievement(req.body.user.id, 'conversations')
+          .catch(error => console.error('Failed to increment conversation achievement:', error));
+      }
+      return origEnd.call(this, chunk, encoding);
+    };
+    next();
+  });
+
+  // Track achievements when sending messages
+  app.post('/api/messages', authenticate, async (req, res, next) => {
+    const origEnd = res.end;
+    res.end = function(chunk?: any, encoding?: any) {
+      // Check if the response status is 200 (Successful)
+      if (res.statusCode === 200 && req.body && req.body.user) {
+        // Increment the message achievement
+        storage.incrementUserAchievement(req.body.user.id, 'messages')
+          .catch(error => console.error('Failed to increment message achievement:', error));
+      }
+      return origEnd.call(this, chunk, encoding);
+    };
+    next();
+  });
+
+  // Track achievements when uploading documents
+  app.post('/api/documents', authenticate, upload.single('file'), async (req, res, next) => {
+    const origEnd = res.end;
+    res.end = function(chunk?: any, encoding?: any) {
+      // Check if the response status is 201 (Created)
+      if (res.statusCode === 201 && req.body && req.body.user) {
+        // Increment the document achievement
+        storage.incrementUserAchievement(req.body.user.id, 'documents')
+          .catch(error => console.error('Failed to increment document achievement:', error));
+      }
+      return origEnd.call(this, chunk, encoding);
+    };
+    next();
+  });
+
+  // Track achievements when creating API keys
+  app.post('/api/api-keys', authenticate, async (req, res, next) => {
+    const origEnd = res.end;
+    res.end = function(chunk?: any, encoding?: any) {
+      // Check if the response status is 201 (Created)
+      if (res.statusCode === 201 && req.body && req.body.user) {
+        // Increment the API key achievement
+        storage.incrementUserAchievement(req.body.user.id, 'api_keys')
+          .catch(error => console.error('Failed to increment API key achievement:', error));
+      }
+      return origEnd.call(this, chunk, encoding);
+    };
+    next();
+  });
+
+  // Track achievements when creating webhooks
+  app.post('/api/webhooks', authenticate, async (req, res, next) => {
+    const origEnd = res.end;
+    res.end = function(chunk?: any, encoding?: any) {
+      // Check if the response status is 201 (Created)
+      if (res.statusCode === 201 && req.body && req.body.user) {
+        // Increment the webhook achievement
+        storage.incrementUserAchievement(req.body.user.id, 'webhooks')
+          .catch(error => console.error('Failed to increment webhook achievement:', error));
+      }
+      return origEnd.call(this, chunk, encoding);
+    };
+    next();
   });
 
   return httpServer;

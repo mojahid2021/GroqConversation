@@ -9,6 +9,7 @@ import {
   Settings,
   ChevronDown,
   ChevronUp,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -144,6 +145,19 @@ export function Sidebar({ className }: SidebarProps) {
             >
               <Settings className="mr-3 h-5 w-5" />
               Settings
+            </Button>
+          </Link>
+          
+          <Link href="/admin/profile">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start text-white hover:bg-[#4A5568] hover:bg-opacity-60 rounded-lg",
+                location === "/admin/profile" && "bg-[#4A5568] bg-opacity-60"
+              )}
+            >
+              <UserCircle className="mr-3 h-5 w-5" />
+              Profile
             </Button>
           </Link>
         </div>

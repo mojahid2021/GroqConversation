@@ -165,3 +165,57 @@ export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+
+// Achievement and Badge system
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  criteria: text("criteria").notNull(),
+  threshold: integer("threshold").notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull()
+});
+
+export const insertBadgeSchema = createInsertSchema(badges).pick({
+  name: true,
+  description: true,
+  icon: true,
+  criteria: true,
+  threshold: true
+});
+
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  badgeId: integer("badge_id").references(() => badges.id).notNull(),
+  earnedAt: timestamp("earned_at", { mode: 'string' }).defaultNow().notNull()
+});
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).pick({
+  userId: true,
+  badgeId: true
+});
+
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(),
+  count: integer("count").notNull().default(0),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull()
+});
+
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).pick({
+  userId: true,
+  type: true,
+  count: true
+});
+
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;

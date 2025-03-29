@@ -1,5 +1,6 @@
 import {
   users, conversations, messages, documents, apiKeys, webhooks, analytics, settings,
+  badges, userBadges, userAchievements,
   type User, type InsertUser,
   type Conversation, type InsertConversation,
   type Message, type InsertMessage,
@@ -7,7 +8,10 @@ import {
   type ApiKey, type InsertApiKey,
   type Webhook, type InsertWebhook,
   type Analytics, type InsertAnalytics,
-  type Settings, type InsertSettings
+  type Settings, type InsertSettings,
+  type Badge, type InsertBadge,
+  type UserBadge, type InsertUserBadge,
+  type UserAchievement, type InsertUserAchievement
 } from "@shared/schema";
 
 export interface IStorage {
@@ -58,6 +62,24 @@ export interface IStorage {
   getSettingsByUserId(userId: number): Promise<Settings | undefined>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(userId: number, settings: Partial<Settings>): Promise<Settings | undefined>;
+  
+  // Badge operations
+  getBadge(id: number): Promise<Badge | undefined>;
+  getAllBadges(): Promise<Badge[]>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  
+  // User Badge operations
+  getUserBadge(id: number): Promise<UserBadge | undefined>;
+  getUserBadgesByUserId(userId: number): Promise<UserBadge[]>;
+  createUserBadge(userBadge: InsertUserBadge): Promise<UserBadge>;
+  
+  // User Achievement operations
+  getUserAchievement(id: number): Promise<UserAchievement | undefined>;
+  getUserAchievementsByUserId(userId: number): Promise<UserAchievement[]>;
+  getUserAchievementByType(userId: number, type: string): Promise<UserAchievement | undefined>;
+  createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+  updateUserAchievement(id: number, userAchievement: Partial<UserAchievement>): Promise<UserAchievement | undefined>;
+  incrementUserAchievement(userId: number, type: string, amount?: number): Promise<UserAchievement>;
 }
 
 export class MemStorage implements IStorage {
@@ -69,6 +91,9 @@ export class MemStorage implements IStorage {
   private webhooks: Map<number, Webhook>;
   private analytics: Map<number, Analytics>;
   private settings: Map<number, Settings>;
+  private badges: Map<number, Badge>;
+  private userBadges: Map<number, UserBadge>;
+  private userAchievements: Map<number, UserAchievement>;
   
   private userIdCounter: number;
   private conversationIdCounter: number;
@@ -78,6 +103,9 @@ export class MemStorage implements IStorage {
   private webhookIdCounter: number;
   private analyticsIdCounter: number;
   private settingsIdCounter: number;
+  private badgeIdCounter: number;
+  private userBadgeIdCounter: number;
+  private userAchievementIdCounter: number;
   
   constructor() {
     this.users = new Map();
@@ -88,6 +116,9 @@ export class MemStorage implements IStorage {
     this.webhooks = new Map();
     this.analytics = new Map();
     this.settings = new Map();
+    this.badges = new Map();
+    this.userBadges = new Map();
+    this.userAchievements = new Map();
     
     this.userIdCounter = 1;
     this.conversationIdCounter = 1;
@@ -97,6 +128,9 @@ export class MemStorage implements IStorage {
     this.webhookIdCounter = 1;
     this.analyticsIdCounter = 1;
     this.settingsIdCounter = 1;
+    this.badgeIdCounter = 1;
+    this.userBadgeIdCounter = 1;
+    this.userAchievementIdCounter = 1;
 
     // Add a default admin user
     this.createUser({
@@ -105,6 +139,8 @@ export class MemStorage implements IStorage {
       email: 'admin@example.com',
       role: 'admin'
     });
+    
+    // We'll add default badges later in a setup function to avoid constructor issues
   }
   
   // User operations
@@ -362,6 +398,174 @@ export class MemStorage implements IStorage {
     this.settings.set(settings.id, updatedSettings);
     return updatedSettings;
   }
+
+  // Badge operations
+  async getBadge(id: number): Promise<Badge | undefined> {
+    return this.badges.get(id);
+  }
+
+  async getAllBadges(): Promise<Badge[]> {
+    return Array.from(this.badges.values());
+  }
+
+  async createBadge(insertBadge: InsertBadge): Promise<Badge> {
+    const id = this.badgeIdCounter++;
+    const createdAt = new Date().toISOString();
+    const badge: Badge = { ...insertBadge, id, createdAt };
+    this.badges.set(id, badge);
+    return badge;
+  }
+
+  // User Badge operations
+  async getUserBadge(id: number): Promise<UserBadge | undefined> {
+    return this.userBadges.get(id);
+  }
+
+  async getUserBadgesByUserId(userId: number): Promise<UserBadge[]> {
+    return Array.from(this.userBadges.values()).filter(
+      (userBadge) => userBadge.userId === userId
+    );
+  }
+
+  async createUserBadge(insertUserBadge: InsertUserBadge): Promise<UserBadge> {
+    const id = this.userBadgeIdCounter++;
+    const earnedAt = new Date().toISOString();
+    const userBadge: UserBadge = { ...insertUserBadge, id, earnedAt };
+    this.userBadges.set(id, userBadge);
+    return userBadge;
+  }
+
+  // User Achievement operations
+  async getUserAchievement(id: number): Promise<UserAchievement | undefined> {
+    return this.userAchievements.get(id);
+  }
+
+  async getUserAchievementsByUserId(userId: number): Promise<UserAchievement[]> {
+    return Array.from(this.userAchievements.values()).filter(
+      (userAchievement) => userAchievement.userId === userId
+    );
+  }
+
+  async getUserAchievementByType(userId: number, type: string): Promise<UserAchievement | undefined> {
+    return Array.from(this.userAchievements.values()).find(
+      (userAchievement) => userAchievement.userId === userId && userAchievement.type === type
+    );
+  }
+
+  async createUserAchievement(insertUserAchievement: InsertUserAchievement): Promise<UserAchievement> {
+    const id = this.userAchievementIdCounter++;
+    const updatedAt = new Date().toISOString();
+    const userAchievement: UserAchievement = { 
+      ...insertUserAchievement, 
+      id, 
+      updatedAt,
+      // Ensure count has a default value if not provided
+      count: insertUserAchievement.count || 0 
+    };
+    this.userAchievements.set(id, userAchievement);
+    return userAchievement;
+  }
+
+  async updateUserAchievement(id: number, data: Partial<UserAchievement>): Promise<UserAchievement | undefined> {
+    const userAchievement = await this.getUserAchievement(id);
+    if (!userAchievement) return undefined;
+    
+    const updatedUserAchievement: UserAchievement = { 
+      ...userAchievement, 
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.userAchievements.set(id, updatedUserAchievement);
+    return updatedUserAchievement;
+  }
+
+  async incrementUserAchievement(userId: number, type: string, amount: number = 1): Promise<UserAchievement> {
+    // Find existing achievement or create a new one
+    let achievement = await this.getUserAchievementByType(userId, type);
+    
+    if (achievement) {
+      // Update existing achievement
+      achievement.count += amount;
+      achievement.updatedAt = new Date().toISOString();
+      this.userAchievements.set(achievement.id, achievement);
+    } else {
+      // Create new achievement
+      achievement = await this.createUserAchievement({
+        userId,
+        type,
+        count: amount
+      });
+    }
+    
+    // Check if user has earned any badges based on this achievement
+    const badges = await this.getAllBadges();
+    for (const badge of badges) {
+      if (badge.criteria === type && achievement.count >= badge.threshold) {
+        // Check if user already has this badge
+        const existingBadges = await this.getUserBadgesByUserId(userId);
+        const hasBadge = existingBadges.some(ub => ub.badgeId === badge.id);
+        
+        if (!hasBadge) {
+          // Award new badge
+          await this.createUserBadge({
+            userId,
+            badgeId: badge.id
+          });
+        }
+      }
+    }
+    
+    return achievement;
+  }
 }
 
 export const storage = new MemStorage();
+
+// Initialize default badges
+async function initializeDefaultBadges() {
+  // Create default badges
+  await storage.createBadge({
+    name: 'Conversation Starter',
+    description: 'Started your first conversation',
+    icon: 'MessageSquare',
+    criteria: 'conversations',
+    threshold: 1
+  });
+  
+  await storage.createBadge({
+    name: 'Chat Enthusiast',
+    description: 'Sent 10 messages',
+    icon: 'MessageCircle',
+    criteria: 'messages',
+    threshold: 10
+  });
+  
+  await storage.createBadge({
+    name: 'Document Master',
+    description: 'Uploaded 5 documents',
+    icon: 'FileText',
+    criteria: 'documents',
+    threshold: 5
+  });
+  
+  await storage.createBadge({
+    name: 'API Developer',
+    description: 'Created an API key',
+    icon: 'Key',
+    criteria: 'api_keys',
+    threshold: 1
+  });
+  
+  await storage.createBadge({
+    name: 'Integration Expert',
+    description: 'Set up a webhook',
+    icon: 'Webhook',
+    criteria: 'webhooks',
+    threshold: 1
+  });
+
+  console.log('Default badges initialized');
+}
+
+// Call the initialization function
+initializeDefaultBadges();
