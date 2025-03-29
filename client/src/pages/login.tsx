@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [username, setUsername] = useState("");
+  const { login } = useAuth();
+  const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,22 +30,18 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest("POST", "/api/login", {
-        username,
-        password
-      });
+      const success = await login(username, password);
       
-      if (response.ok) {
+      if (success) {
         toast({
           title: "Success",
           description: "Logged in successfully",
         });
         
-        // Redirect to chat page
-        setLocation("/chat");
+        // Redirect to admin dashboard
+        setLocation("/admin/documents");
       } else {
-        const data = await response.json();
-        throw new Error(data.message || "Login failed");
+        throw new Error("Invalid credentials");
       }
     } catch (error) {
       toast({
@@ -61,9 +58,9 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-[#F7FAFC]">
       <Card className="w-[400px] shadow-lg">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-[#2D3748]">GroqChat</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center text-[#2D3748]">GroqChat Admin</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to sign in to your account
+            Enter your credentials to access the admin panel
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -100,8 +97,15 @@ export default function Login() {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-xs text-center text-gray-500 mt-2">
-            For demo purposes, use username: <span className="font-semibold">admin</span> and password: <span className="font-semibold">password</span>
+            For admin access, use username: <span className="font-semibold">admin</span> and password: <span className="font-semibold">admin123</span>
           </p>
+          <Button
+            variant="link"
+            className="mt-2 text-sm text-[#805AD5]"
+            onClick={() => setLocation("/")}
+          >
+            Back to Public Chat
+          </Button>
         </CardFooter>
       </Card>
     </div>

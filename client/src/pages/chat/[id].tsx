@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button";
 import { useChat } from "@/hooks/use-chat";
 import { PanelRightOpen } from "lucide-react";
 
-export default function ChatConversation() {
+interface ChatConversationProps {
+  id?: string;
+}
+
+export default function ChatConversation({ id }: ChatConversationProps = {}) {
   const params = useParams();
-  const conversationId = params.id ? parseInt(params.id) : undefined;
+  const conversationId = id ? parseInt(id) : params.id ? parseInt(params.id) : undefined;
   const [documentSidebarOpen, setDocumentSidebarOpen] = useState(false);
   
   const {
