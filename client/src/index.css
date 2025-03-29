@@ -7,7 +7,17 @@
     @apply border-border;
   }
 
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
+  html, body {
+    @apply font-sans antialiased bg-background text-foreground h-full;
+  }
+
+  /* Enable scrolling on all pages */
+  .page-container {
+    @apply overflow-y-auto max-h-screen pb-6;
+  }
+
+  /* Ensure content doesn't get cut off at the bottom */
+  main {
+    @apply min-h-[calc(100vh-80px)];
   }
 }

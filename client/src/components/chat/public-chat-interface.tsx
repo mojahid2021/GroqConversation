@@ -1,6 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ChatInput } from "./chat-input";
 import { usePublicChat, PublicChatMessage } from "@/lib/public-chat";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Key, MoreHorizontal } from "lucide-react";
 
 // Public chat message component
 function PublicChatMessageBubble({ message }: { message: PublicChatMessage }) {
@@ -33,10 +38,111 @@ function PublicChatMessageBubble({ message }: { message: PublicChatMessage }) {
   );
 }
 
+// API Key Dialog Component
+function ApiKeyDialog({ 
+  isOpen, 
+  onClose, 
+  onSave 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSave: (key: string) => void;
+}) {
+  const [apiKey, setApiKey] = useState("");
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add Groq API Key</DialogTitle>
+          <DialogDescription>
+            Add your Groq API key to enable AI responses in the public chat. You can get one by signing up at{" "}
+            <a 
+              href="https://console.groq.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 underline"
+            >
+              console.groq.com
+            </a>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="apiKey" className="text-right col-span-1">
+              API Key
+            </Label>
+            <Input
+              id="apiKey"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="groq_api_xxxxxxxxxxxx"
+              className="col-span-3"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => onSave(apiKey)} disabled={!apiKey.trim()}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Custom Chat Input with API Key button
+function ChatInputWithApiKey({ 
+  onSendMessage, 
+  isLoading, 
+  onApiKeyClick,
+  apiKeySet
+}: { 
+  onSendMessage: (content: string) => Promise<void>; 
+  isLoading: boolean;
+  onApiKeyClick: () => void;
+  apiKeySet: boolean;
+}) {
+  const [inputValue, setInputValue] = useState("");
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue.trim() && !isLoading) {
+      onSendMessage(inputValue);
+      setInputValue("");
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4 flex items-end gap-2">
+      <div className="relative flex-1">
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Type your message here..."
+          className="pr-10"
+          disabled={isLoading}
+        />
+        <button
+          type="button"
+          onClick={onApiKeyClick}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          <Key className={`h-5 w-5 ${apiKeySet ? 'text-green-500' : 'text-gray-400'}`} />
+        </button>
+      </div>
+      <Button type="submit" disabled={!inputValue.trim() || isLoading}>
+        Send
+      </Button>
+    </form>
+  );
+}
+
 // Public chat interface component
 export function PublicChatInterface({ className }: { className?: string }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { messages, sendMessage, isLoading } = usePublicChat();
+  const { messages, sendMessage, isLoading, apiKeySet, setApiKey } = usePublicChat();
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -44,6 +150,11 @@ export function PublicChatInterface({ className }: { className?: string }) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleApiKeySave = (key: string) => {
+    setApiKey(key);
+    setApiKeyDialogOpen(false);
+  };
 
   return (
     <div className={`flex-1 flex flex-col bg-white h-full ${className}`}>
@@ -55,7 +166,10 @@ export function PublicChatInterface({ className }: { className?: string }) {
         {messages.length === 0 && (
           <div className="chat-message mx-auto max-w-3xl mb-6 text-center">
             <p className="text-sm text-gray-500">
-              Welcome to the public chat! No login required. Start typing to chat with our AI assistant.
+              Welcome to the public chat! {apiKeySet 
+                ? 'Your API key is set. Start chatting with our AI assistant.'
+                : 'Click the key icon below to add your Groq API key and enable AI responses.'
+              }
             </p>
           </div>
         )}
@@ -83,10 +197,19 @@ export function PublicChatInterface({ className }: { className?: string }) {
         )}
       </div>
       
-      {/* Chat Input */}
-      <ChatInput 
+      {/* Chat Input with API Key button */}
+      <ChatInputWithApiKey 
         onSendMessage={sendMessage} 
         isLoading={isLoading}
+        onApiKeyClick={() => setApiKeyDialogOpen(true)}
+        apiKeySet={apiKeySet}
+      />
+      
+      {/* API Key Dialog */}
+      <ApiKeyDialog 
+        isOpen={apiKeyDialogOpen}
+        onClose={() => setApiKeyDialogOpen(false)}
+        onSave={handleApiKeySave}
       />
     </div>
   );

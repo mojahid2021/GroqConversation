@@ -769,6 +769,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     next();
   });
+  
+  // Public chat webhook routes (no authentication required)
+  app.post('/api/public/webhook', async (req, res) => {
+    try {
+      const { name, url, key } = req.body;
+      
+      if (!name || !url || !key) {
+        return res.status(400).json({ message: "Name, URL and API key are required" });
+      }
+      
+      // Generate a user ID based on the hash of the API key
+      // This allows us to associate webhooks with API keys without requiring authentication
+      // Simple hash function based on API key
+      let hashSum = 0;
+      for (let i = 0; i < key.length; i++) {
+        hashSum += key.charCodeAt(i);
+      }
+      
+      // Ensure positive ID with good distribution
+      const pseudoUserId = Math.abs(hashSum % 1000000) + 10000; // Add offset to avoid conflicts
+      
+      // Check if user exists, if not create one
+      let user = await storage.getUserByUsername(`public_${pseudoUserId}`);
+      
+      if (!user) {
+        // Create a new user with the pseudo ID
+        user = await storage.createUser({
+          username: `public_${pseudoUserId}`,
+          email: `public_${pseudoUserId}@example.com`,
+          password: `public_${pseudoUserId}`, // Not actually used for authentication
+          role: 'user'
+        });
+      }
+      
+      // Create webhook for this public user
+      const webhook = await storage.createWebhook({
+        userId: user.id,
+        name,
+        url,
+        active: true
+      });
+      
+      return res.status(201).json(webhook);
+    } catch (error) {
+      console.error('Error creating public webhook:', error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.post('/api/public/notify', async (req, res) => {
+    try {
+      const { userMessage, aiMessage, key } = req.body;
+      
+      if (!userMessage || !aiMessage || !key) {
+        return res.status(400).json({ message: "User message, AI message and API key are required" });
+      }
+      
+      // Generate the same user ID from the API key hash
+      // Simple hash function based on API key (must match the function in webhook creation)
+      let hashSum = 0;
+      for (let i = 0; i < key.length; i++) {
+        hashSum += key.charCodeAt(i);
+      }
+      
+      // Ensure positive ID with good distribution
+      const pseudoUserId = Math.abs(hashSum % 1000000) + 10000;
+      
+      // Find the associated user
+      const user = await storage.getUserByUsername(`public_${pseudoUserId}`);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get all webhooks for this user
+      const webhooks = await storage.getWebhooksByUserId(user.id);
+      
+      if (webhooks.length === 0) {
+        return res.status(404).json({ message: "No webhooks found" });
+      }
+      
+      // Notification data
+      const notificationData = {
+        event: "chat_message",
+        data: {
+          userMessage,
+          aiMessage,
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      // Send notifications to all active webhooks
+      const activeWebhooks = webhooks.filter(webhook => webhook.active);
+      
+      // Track webhook notification results
+      const results = await Promise.allSettled(
+        activeWebhooks.map(webhook => 
+          fetch(webhook.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(notificationData)
+          })
+        )
+      );
+      
+      // Count successes
+      const successCount = results.filter(result => result.status === 'fulfilled').length;
+      
+      return res.status(200).json({ 
+        message: `Notifications sent to ${successCount}/${activeWebhooks.length} webhooks` 
+      });
+    } catch (error) {
+      console.error('Error sending webhook notification:', error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
 
   return httpServer;
 }

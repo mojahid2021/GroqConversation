@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { AnalyticsCards } from "@/components/dashboard/analytics-cards";
 import { UsageChart } from "@/components/dashboard/usage-chart";
+import { PricingDashboard } from "@/components/dashboard/pricing-dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -18,6 +19,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { AnalyticsSummary, Analytics } from "@/lib/groq-api";
 import { format } from "date-fns";
@@ -62,39 +64,54 @@ export default function AnalyticsPage() {
         <AnalyticsCards />
         <UsageChart className="mb-6" />
         
-        <Card className="shadow-sm">
-          <CardHeader className="px-6 py-4 border-b border-gray-200">
-            <CardTitle>Usage Details</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {isLoading ? (
-              <div className="text-center py-12 text-gray-500">Loading usage data...</div>
-            ) : analyticsData?.analytics.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <p>No usage data available for the selected time period.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Tokens Used</TableHead>
-                    <TableHead>Cost</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {analyticsData?.analytics.map((item: Analytics) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.date)}</TableCell>
-                      <TableCell>{item.tokensUsed.toLocaleString()}</TableCell>
-                      <TableCell>{formatCost(item.cost)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="usage" className="mb-6">
+          <TabsList className="mb-4">
+            <TabsTrigger value="usage">Usage Details</TabsTrigger>
+            <TabsTrigger value="pricing">Model Pricing</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="usage">
+            <Card className="shadow-sm">
+              <CardHeader className="px-6 py-4 border-b border-gray-200">
+                <CardTitle>Usage Details</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {isLoading ? (
+                  <div className="text-center py-12 text-gray-500">Loading usage data...</div>
+                ) : analyticsData?.analytics.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>No usage data available for the selected time period.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-auto max-h-[500px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Tokens Used</TableHead>
+                          <TableHead>Cost</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {analyticsData?.analytics.map((item: Analytics) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{formatDate(item.date)}</TableCell>
+                            <TableCell>{item.tokensUsed.toLocaleString()}</TableCell>
+                            <TableCell>{formatCost(item.cost)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="pricing">
+            <PricingDashboard />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
