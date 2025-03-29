@@ -77,13 +77,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
-    const user = await storage.getUser(Number(userId));
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+    try {
+      const userIdNum = Number(userId);
+      const user = await storage.getUser(userIdNum);
+      
+      if (!user) {
+        // If user with ID 1 doesn't exist (admin), create it 
+        if (userIdNum === 1) {
+          const adminUser = await storage.createUser({
+            username: 'admin',
+            password: 'admin123', // Matches the password in auth-context
+            email: 'admin@example.com',
+            role: 'admin'
+          });
+          req.body.user = adminUser;
+          return next();
+        }
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      req.body.user = user;
+      next();
+    } catch (error) {
+      console.error("Authentication error:", error);
+      return res.status(500).json({ message: "Authentication failed" });
     }
-    
-    req.body.user = user;
-    next();
   };
 
   // User Routes
@@ -344,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userId = req.body.user.id;
-      const { filename, path: filePath, size, mimetype } = req.file;
+      const { originalname, path: filePath, size, mimetype } = req.file;
       
       // Process PDF file
       let content = "";
@@ -353,20 +371,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pdfData = await pdfParse(dataBuffer);
         content = pdfData.text;
       } catch (pdfError) {
+        console.error("PDF parsing error:", pdfError);
         return res.status(400).json({ message: "Failed to parse PDF file" });
       }
       
-      // Save document to storage
-      const document = await storage.createDocument({
-        name: filename,
-        userId,
-        content,
-        type: mimetype,
-        size: Math.ceil(size / 1024) // Convert bytes to KB
-      });
-      
-      return res.status(201).json(document);
+      try {
+        // Save document to storage
+        const document = await storage.createDocument({
+          name: originalname, // Use original filename instead of generated one
+          userId,
+          content,
+          type: mimetype,
+          size: Math.ceil(size / 1024) // Convert bytes to KB
+        });
+        
+        return res.status(201).json(document);
+      } catch (storageError) {
+        console.error("Storage error:", storageError);
+        return res.status(500).json({ message: "Failed to save document" });
+      }
     } catch (error) {
+      console.error("Document upload error:", error);
       return res.status(500).json({ message: "Server error" });
     }
   });

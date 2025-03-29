@@ -101,7 +101,7 @@ export class MemStorage implements IStorage {
     // Add a default admin user
     this.createUser({
       username: 'admin',
-      password: 'password', // In a real app this would be hashed
+      password: 'admin123', // Matches the password in auth-context
       email: 'admin@example.com',
       role: 'admin'
     });
@@ -127,7 +127,13 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const createdAt = new Date();
-    const user: User = { ...insertUser, id, createdAt };
+    // Ensure role property is always defined
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      createdAt,
+      role: insertUser.role || 'user' // Default to 'user' if role is not provided
+    };
     this.users.set(id, user);
     return user;
   }
@@ -183,7 +189,14 @@ export class MemStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const id = this.messageIdCounter++;
     const createdAt = new Date();
-    const message: Message = { ...insertMessage, id, createdAt };
+    const message: Message = { 
+      ...insertMessage, 
+      id, 
+      createdAt,
+      // Ensure required properties have non-undefined values
+      documentReference: insertMessage.documentReference ?? null,
+      tokenCount: insertMessage.tokenCount ?? null
+    };
     this.messages.set(id, message);
     return message;
   }
@@ -225,7 +238,12 @@ export class MemStorage implements IStorage {
   async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
     const id = this.apiKeyIdCounter++;
     const createdAt = new Date();
-    const apiKey: ApiKey = { ...insertApiKey, id, createdAt };
+    const apiKey: ApiKey = { 
+      ...insertApiKey, 
+      id, 
+      createdAt,
+      active: insertApiKey.active !== undefined ? insertApiKey.active : true
+    };
     this.apiKeys.set(id, apiKey);
     return apiKey;
   }
@@ -257,7 +275,12 @@ export class MemStorage implements IStorage {
   async createWebhook(insertWebhook: InsertWebhook): Promise<Webhook> {
     const id = this.webhookIdCounter++;
     const createdAt = new Date();
-    const webhook: Webhook = { ...insertWebhook, id, createdAt };
+    const webhook: Webhook = { 
+      ...insertWebhook, 
+      id, 
+      createdAt,
+      active: insertWebhook.active !== undefined ? insertWebhook.active : true
+    };
     this.webhooks.set(id, webhook);
     return webhook;
   }
@@ -284,10 +307,13 @@ export class MemStorage implements IStorage {
   
   async getAnalyticsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Analytics[]> {
     return Array.from(this.analytics.values()).filter(
-      (analytics) => 
-        analytics.userId === userId && 
-        analytics.date >= startDate && 
-        analytics.date <= endDate
+      (analytics) => {
+        // Only include analytics where date is not null and is in the range
+        if (analytics.userId !== userId || analytics.date === null) {
+          return false;
+        }
+        return analytics.date >= startDate && analytics.date <= endDate;
+      }
     );
   }
   
@@ -309,7 +335,17 @@ export class MemStorage implements IStorage {
   async createSettings(insertSettings: InsertSettings): Promise<Settings> {
     const id = this.settingsIdCounter++;
     const updatedAt = new Date();
-    const settings: Settings = { ...insertSettings, id, updatedAt };
+    const settings: Settings = { 
+      ...insertSettings, 
+      id, 
+      updatedAt,
+      // Ensure all required fields have default values
+      groqApiKey: insertSettings.groqApiKey ?? null,
+      defaultModel: insertSettings.defaultModel ?? 'llama3-8b-8192',
+      maxTokens: insertSettings.maxTokens ?? 4096,
+      temperature: insertSettings.temperature ?? 70, // default 0.7 * 100
+      theme: insertSettings.theme ?? 'light'
+    };
     this.settings.set(id, settings);
     return settings;
   }

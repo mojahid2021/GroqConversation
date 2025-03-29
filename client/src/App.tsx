@@ -27,23 +27,18 @@ function App() {
             <Route path="/" component={PublicChat} />
             <Route path="/admin/login" component={Login} />
             
-            {/* Protected Admin Routes */}
-            <Route path="/admin">
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            </Route>
-            <Route path="/admin/chat">
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            </Route>
+            {/* Protected Admin Routes - exact path matching */}
             <Route path="/admin/chat/:id">
               {(params) => (
                 <ProtectedRoute>
                   <ChatConversation />
                 </ProtectedRoute>
               )}
+            </Route>
+            <Route path="/admin/chat">
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
             </Route>
             <Route path="/admin/documents">
               <ProtectedRoute>
@@ -63,6 +58,13 @@ function App() {
             <Route path="/admin/settings">
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            </Route>
+            
+            {/* Default admin route */}
+            <Route path="/admin">
+              <ProtectedRoute>
+                <Chat />
               </ProtectedRoute>
             </Route>
             
