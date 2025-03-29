@@ -118,6 +118,7 @@ export const insertAnalyticsSchema = createInsertSchema(analytics).pick({
   userId: true,
   tokensUsed: true,
   cost: true,
+  date: true,
 });
 
 // Settings model

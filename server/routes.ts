@@ -773,39 +773,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public chat webhook routes (no authentication required)
   app.post('/api/public/webhook', async (req, res) => {
     try {
-      const { name, url, key } = req.body;
+      const { name, url } = req.body;
       
-      if (!name || !url || !key) {
-        return res.status(400).json({ message: "Name, URL and API key are required" });
+      if (!name || !url) {
+        return res.status(400).json({ message: "Name and URL are required" });
       }
       
-      // Generate a user ID based on the hash of the API key
-      // This allows us to associate webhooks with API keys without requiring authentication
-      // Simple hash function based on API key
-      let hashSum = 0;
-      for (let i = 0; i < key.length; i++) {
-        hashSum += key.charCodeAt(i);
-      }
-      
-      // Ensure positive ID with good distribution
-      const pseudoUserId = Math.abs(hashSum % 1000000) + 10000; // Add offset to avoid conflicts
-      
-      // Check if user exists, if not create one
-      let user = await storage.getUserByUsername(`public_${pseudoUserId}`);
-      
-      if (!user) {
-        // Create a new user with the pseudo ID
-        user = await storage.createUser({
-          username: `public_${pseudoUserId}`,
-          email: `public_${pseudoUserId}@example.com`,
-          password: `public_${pseudoUserId}`, // Not actually used for authentication
-          role: 'user'
-        });
-      }
-      
-      // Create webhook for this public user
+      // Create webhook for public use
       const webhook = await storage.createWebhook({
-        userId: user.id,
+        userId: 1, // Admin user ID - all public webhooks are associated with admin
         name,
         url,
         active: true
@@ -818,36 +794,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/public/notify', async (req, res) => {
+  // Add a server-side endpoint that processes chat requests
+  app.post('/api/chat', async (req, res) => {
     try {
-      const { userMessage, aiMessage, key } = req.body;
+      const { messages, model } = req.body;
       
-      if (!userMessage || !aiMessage || !key) {
-        return res.status(400).json({ message: "User message, AI message and API key are required" });
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Messages are required and must be an array" });
       }
       
-      // Generate the same user ID from the API key hash
-      // Simple hash function based on API key (must match the function in webhook creation)
-      let hashSum = 0;
-      for (let i = 0; i < key.length; i++) {
-        hashSum += key.charCodeAt(i);
+      // Get settings which should include the Groq API key
+      const settings = await storage.getSettingsByUserId(1); // Use admin settings
+      
+      if (!settings || !settings.groqApiKey) {
+        return res.status(500).json({ error: "API key not configured. Administrator should set a Groq API key in settings." });
       }
       
-      // Ensure positive ID with good distribution
-      const pseudoUserId = Math.abs(hashSum % 1000000) + 10000;
+      try {
+        // Make request to Groq API
+        const response = await axios({
+          method: 'post',
+          url: 'https://api.groq.com/openai/v1/chat/completions',
+          headers: {
+            'Authorization': `Bearer ${settings.groqApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          data: {
+            model: model || settings.defaultModel || "llama3-70b-8192",
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 1024
+          }
+        });
+        
+        // Extract the response
+        if (response.data && response.data.choices && response.data.choices.length > 0) {
+          // Track tokens used
+          const promptTokens = response.data.usage?.prompt_tokens || 0;
+          const completionTokens = response.data.usage?.completion_tokens || 0;
+          const totalTokens = promptTokens + completionTokens;
+          
+          // Calculate cost based on token usage
+          const cost = calculateCost(totalTokens);
+          
+          // Store analytics
+          const now = new Date();
+          const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          
+          // Check if we have an analytics entry for today
+          const todayAnalytics = await storage.getAnalyticsByDateRange(1, startOfDay, now);
+          
+          if (todayAnalytics.length > 0) {
+            // Update existing entry
+            const analytics = todayAnalytics[0];
+            await storage.updateAnalytics(analytics.id, {
+              tokensUsed: analytics.tokensUsed + totalTokens,
+              cost: analytics.cost + cost
+            });
+          } else {
+            // Create new entry
+            await storage.createAnalytics({
+              userId: 1,
+              tokensUsed: totalTokens,
+              cost: cost
+            });
+          }
+          
+          return res.status(200).json({ 
+            reply: response.data.choices[0].message.content,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens,
+              cost
+            }
+          });
+        } else {
+          throw new Error("Invalid response from Groq API");
+        }
+      } catch (error) {
+        console.error('Error calling Groq API:', error);
+        if (axios.isAxiosError(error) && error.response) {
+          return res.status(error.response.status).json({ 
+            error: error.response.data.error?.message || 'Unknown error from Groq API'
+          });
+        }
+        return res.status(500).json({ error: "Failed to connect to the Groq API" });
+      }
+    } catch (error) {
+      console.error('Error in chat endpoint:', error);
+      return res.status(500).json({ error: "Server error" });
+    }
+  });
+  
+  // Generic webhook notification endpoint that doesn't require API key
+  app.post('/api/public/webhook/notify', async (req, res) => {
+    try {
+      const { userMessage, aiMessage } = req.body;
       
-      // Find the associated user
-      const user = await storage.getUserByUsername(`public_${pseudoUserId}`);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      if (!userMessage || !aiMessage) {
+        return res.status(400).json({ message: "User message and AI message are required" });
       }
       
-      // Get all webhooks for this user
-      const webhooks = await storage.getWebhooksByUserId(user.id);
+      // Get all webhooks - in this model, all webhooks are sent all messages
+      const webhooks = await storage.getWebhooksByUserId(1); // Admin user ID
       
       if (webhooks.length === 0) {
-        return res.status(404).json({ message: "No webhooks found" });
+        return res.status(200).json({ message: "No webhooks found, but request accepted" });
       }
       
       // Notification data

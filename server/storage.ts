@@ -57,6 +57,7 @@ export interface IStorage {
   getAnalyticsByUserId(userId: number): Promise<Analytics[]>;
   getAnalyticsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Analytics[]>;
   createAnalytics(analytics: InsertAnalytics): Promise<Analytics>;
+  updateAnalytics(id: number, analytics: Partial<Analytics>): Promise<Analytics | undefined>;
   
   // Settings operations
   getSettingsByUserId(userId: number): Promise<Settings | undefined>;
@@ -359,6 +360,15 @@ export class MemStorage implements IStorage {
     const analytics: Analytics = { ...insertAnalytics, id, date };
     this.analytics.set(id, analytics);
     return analytics;
+  }
+  
+  async updateAnalytics(id: number, data: Partial<Analytics>): Promise<Analytics | undefined> {
+    const analytics = this.analytics.get(id);
+    if (!analytics) return undefined;
+    
+    const updatedAnalytics: Analytics = { ...analytics, ...data };
+    this.analytics.set(id, updatedAnalytics);
+    return updatedAnalytics;
   }
   
   // Settings operations

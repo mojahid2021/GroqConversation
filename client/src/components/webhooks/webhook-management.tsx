@@ -225,7 +225,10 @@ export function WebhookManagement() {
               >
                 <div>
                   <h3 className="font-medium">{webhook.name}</h3>
-                  <div className="text-sm text-gray-500 mt-1">{webhook.url}</div>
+                  <div className="flex items-center mt-1">
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded mr-2">URL</span>
+                    <div className="text-sm font-mono text-blue-600 break-all">{webhook.url}</div>
+                  </div>
                   <div className="text-xs text-gray-400 mt-1">
                     Created on {formatDate(webhook.createdAt)}
                   </div>

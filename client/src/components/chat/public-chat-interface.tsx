@@ -38,52 +38,34 @@ function PublicChatMessageBubble({ message }: { message: PublicChatMessage }) {
   );
 }
 
-// API Key Dialog Component
-function ApiKeyDialog({ 
+// Webhook Info Dialog Component
+function WebhookInfoDialog({ 
   isOpen, 
-  onClose, 
-  onSave 
+  onClose
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
-  onSave: (key: string) => void;
 }) {
-  const [apiKey, setApiKey] = useState("");
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Groq API Key</DialogTitle>
+          <DialogTitle>About Public Chat Webhooks</DialogTitle>
           <DialogDescription>
-            Add your Groq API key to enable AI responses in the public chat. You can get one by signing up at{" "}
-            <a 
-              href="https://console.groq.com/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-500 underline"
-            >
-              console.groq.com
-            </a>
+            This public chat is connected through system-generated webhooks. Administrators can configure webhooks in the admin panel.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="apiKey" className="text-right col-span-1">
-              API Key
-            </Label>
-            <Input
-              id="apiKey"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="groq_api_xxxxxxxxxxxx"
-              className="col-span-3"
-            />
-          </div>
+        <div className="py-4">
+          <p className="text-sm mb-2">Webhooks allow:</p>
+          <ul className="text-sm list-disc pl-5 space-y-1">
+            <li>Real-time notifications when messages are sent</li>
+            <li>Integration with external systems</li>
+            <li>Automated responses from other services</li>
+          </ul>
         </div>
         <DialogFooter>
-          <Button onClick={() => onSave(apiKey)} disabled={!apiKey.trim()}>
-            Save
+          <Button onClick={onClose}>
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -91,17 +73,15 @@ function ApiKeyDialog({
   );
 }
 
-// Custom Chat Input with API Key button
-function ChatInputWithApiKey({ 
+// Custom Chat Input with webhook info button
+function ChatInputWithWebhook({ 
   onSendMessage, 
   isLoading, 
-  onApiKeyClick,
-  apiKeySet
+  onWebhookInfoClick
 }: { 
   onSendMessage: (content: string) => Promise<void>; 
   isLoading: boolean;
-  onApiKeyClick: () => void;
-  apiKeySet: boolean;
+  onWebhookInfoClick: () => void;
 }) {
   const [inputValue, setInputValue] = useState("");
   
@@ -125,10 +105,10 @@ function ChatInputWithApiKey({
         />
         <button
           type="button"
-          onClick={onApiKeyClick}
+          onClick={onWebhookInfoClick}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
         >
-          <Key className={`h-5 w-5 ${apiKeySet ? 'text-green-500' : 'text-gray-400'}`} />
+          <MoreHorizontal className="h-5 w-5" />
         </button>
       </div>
       <Button type="submit" disabled={!inputValue.trim() || isLoading}>
@@ -141,8 +121,8 @@ function ChatInputWithApiKey({
 // Public chat interface component
 export function PublicChatInterface({ className }: { className?: string }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { messages, sendMessage, isLoading, apiKeySet, setApiKey } = usePublicChat();
-  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const { messages, sendMessage, isLoading } = usePublicChat();
+  const [webhookInfoOpen, setWebhookInfoOpen] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -150,11 +130,6 @@ export function PublicChatInterface({ className }: { className?: string }) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const handleApiKeySave = (key: string) => {
-    setApiKey(key);
-    setApiKeyDialogOpen(false);
-  };
 
   return (
     <div className={`flex-1 flex flex-col bg-white h-full ${className}`}>
@@ -166,10 +141,7 @@ export function PublicChatInterface({ className }: { className?: string }) {
         {messages.length === 0 && (
           <div className="chat-message mx-auto max-w-3xl mb-6 text-center">
             <p className="text-sm text-gray-500">
-              Welcome to the public chat! {apiKeySet 
-                ? 'Your API key is set. Start chatting with our AI assistant.'
-                : 'Click the key icon below to add your Groq API key and enable AI responses.'
-              }
+              Welcome to the public chat! Start chatting with our AI assistant.
             </p>
           </div>
         )}
@@ -197,19 +169,17 @@ export function PublicChatInterface({ className }: { className?: string }) {
         )}
       </div>
       
-      {/* Chat Input with API Key button */}
-      <ChatInputWithApiKey 
+      {/* Chat Input with Webhook Info button */}
+      <ChatInputWithWebhook 
         onSendMessage={sendMessage} 
         isLoading={isLoading}
-        onApiKeyClick={() => setApiKeyDialogOpen(true)}
-        apiKeySet={apiKeySet}
+        onWebhookInfoClick={() => setWebhookInfoOpen(true)}
       />
       
-      {/* API Key Dialog */}
-      <ApiKeyDialog 
-        isOpen={apiKeyDialogOpen}
-        onClose={() => setApiKeyDialogOpen(false)}
-        onSave={handleApiKeySave}
+      {/* Webhook Info Dialog */}
+      <WebhookInfoDialog 
+        isOpen={webhookInfoOpen}
+        onClose={() => setWebhookInfoOpen(false)}
       />
     </div>
   );
