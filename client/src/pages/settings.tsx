@@ -5,12 +5,12 @@ import { ApiKeyManagement } from "@/components/dashboard/api-key-management";
 export default function Settings() {
   return (
     <MainLayout>
-      <div className="p-6">
+      <div className="p-6 h-full overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-[#2D3748]">Settings</h1>
         </div>
         
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-6 pb-6">
           <SettingsForm />
           
           <ApiKeyManagement />
