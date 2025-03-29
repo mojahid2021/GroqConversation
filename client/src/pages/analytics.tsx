@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
                     <p>No usage data available for the selected time period.</p>
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[500px]">
+                  <div className="scrollable max-h-[500px]">
                     <Table>
                       <TableHeader>
                         <TableRow>

@@ -21,13 +21,11 @@ import Profile from "@/pages/profile";
 import AdminProfile from "@/pages/admin-profile";
 
 function App() {
-  // Wrapper component to add ScrollArea to all pages
+  // Simple page wrapper without ScrollArea
   const PageWrapper = ({ children }: { children: React.ReactNode }) => (
-    <ScrollArea className="page-container h-screen">
-      <div className="px-4">
-        {children}
-      </div>
-    </ScrollArea>
+    <div className="px-4">
+      {children}
+    </div>
   );
 
   return (

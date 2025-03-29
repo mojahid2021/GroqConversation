@@ -118,33 +118,35 @@ export function PricingDashboard() {
       <CardHeader className="px-6 py-4 border-b border-gray-200">
         <CardTitle>Model Pricing Information</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Model</TableHead>
-              <TableHead className="text-right">Speed (tok/sec)</TableHead>
-              <TableHead className="text-right">Input Price</TableHead>
-              <TableHead className="text-right">Output Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groqModelPricing.map((model) => (
-              <TableRow key={model.name}>
-                <TableCell className="font-medium">{model.name}</TableCell>
-                <TableCell className="text-right">{model.tokensPerSecond}</TableCell>
-                <TableCell className="text-right">
-                  <div>${model.inputPrice.toFixed(2)}</div>
-                  <div className="text-xs text-gray-500">{formatTokensPerDollar(model.inputPrice)}</div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div>${model.outputPrice.toFixed(2)}</div>
-                  <div className="text-xs text-gray-500">{formatTokensPerDollar(model.outputPrice)}</div>
-                </TableCell>
+      <CardContent className="p-0">
+        <div className="scrollable max-h-[500px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Model</TableHead>
+                <TableHead className="text-right">Speed (tok/sec)</TableHead>
+                <TableHead className="text-right">Input Price</TableHead>
+                <TableHead className="text-right">Output Price</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {groqModelPricing.map((model) => (
+                <TableRow key={model.name}>
+                  <TableCell className="font-medium">{model.name}</TableCell>
+                  <TableCell className="text-right">{model.tokensPerSecond}</TableCell>
+                  <TableCell className="text-right">
+                    <div>${model.inputPrice.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">{formatTokensPerDollar(model.inputPrice)}</div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div>${model.outputPrice.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">{formatTokensPerDollar(model.outputPrice)}</div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

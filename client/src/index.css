@@ -8,12 +8,12 @@
   }
 
   html, body {
-    @apply font-sans antialiased bg-background text-foreground h-full;
+    @apply font-sans antialiased bg-background text-foreground h-full overflow-hidden;
   }
 
-  /* Enable scrolling on all pages */
-  .page-container {
-    @apply overflow-y-auto max-h-screen pb-6;
+  /* Add scrolling only to components that need it */
+  .scrollable {
+    @apply overflow-y-auto;
   }
 
   /* Ensure content doesn't get cut off at the bottom */
