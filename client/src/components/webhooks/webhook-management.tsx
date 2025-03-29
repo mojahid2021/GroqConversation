@@ -217,8 +217,9 @@ export function WebhookManagement() {
             <p>No webhooks configured yet. Add a webhook to get started.</p>
           </div>
         ) : (
-          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-            {webhooks?.map((webhook) => (
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-4">
+              {webhooks?.map((webhook) => (
               <div
                 key={webhook.id}
                 className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
@@ -255,7 +256,8 @@ export function WebhookManagement() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>

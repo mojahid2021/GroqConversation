@@ -83,8 +83,9 @@ export default function AnalyticsPage() {
                     <p>No usage data available for the selected time period.</p>
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[500px] pr-2">
-                    <Table className="min-w-full">
+                  <ScrollArea className="h-[500px]">
+                    <div className="pr-4">
+                      <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Date</TableHead>
@@ -102,7 +103,8 @@ export default function AnalyticsPage() {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  </ScrollArea>
                 )}
               </CardContent>
             </Card>
