@@ -116,6 +116,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.createUser(userData);
+      
+      // Create default webhook
+      await storage.createWebhook({
+        userId: user.id,
+        name: "Default Notifications",
+        url: `https://notifications.${user.username}.replit.app/webhook`,
+        active: false // Disabled by default for safety
+      });
+
       // Don't send password in response
       const { password, ...userResponse } = user;
       
