@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ApiKey, createApiKey, updateApiKey, deleteApiKey } from "@/lib/groq-api";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Plus, MoreVertical, Copy, Check, X, EyeOff } from "lucide-react";
+import { Plus, MoreVertical, Copy, Check, X, EyeOff, Trash2 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import {
   DropdownMenu,
