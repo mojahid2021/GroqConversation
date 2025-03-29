@@ -148,7 +148,7 @@ export function WebhookManagement() {
 
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-4">
         <div>
           <CardTitle>Webhook Management</CardTitle>
           <CardDescription className="mt-2">
@@ -158,7 +158,7 @@ export function WebhookManagement() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-[#805AD5] hover:bg-[#805AD5]/90">
+            <Button className="bg-[#805AD5] hover:bg-[#805AD5]/90 w-full sm:w-auto mt-2 sm:mt-0">
               <Plus className="mr-2 h-4 w-4" /> Add Webhook
             </Button>
           </DialogTrigger>
@@ -275,9 +275,39 @@ export function WebhookManagement() {
                 <div className="mt-3 p-3 bg-gray-50 rounded-md">
                   <div className="flex items-center">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded mr-2 font-semibold">WEBHOOK URL</span>
+                    <Button
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhook.url);
+                        toast({
+                          title: "Copied to clipboard",
+                          description: "Webhook URL has been copied to clipboard"
+                        });
+                      }}
+                    >
+                      Copy
+                    </Button>
                   </div>
-                  <div className="text-sm font-mono text-blue-600 break-all mt-2 select-all p-2">
+                  <div 
+                    className="text-sm font-mono text-blue-600 break-all mt-2 select-all p-2 border border-blue-100 rounded bg-white relative"
+                    onClick={(e) => {
+                      const selection = window.getSelection();
+                      if (selection?.type !== 'Range') {
+                        const range = document.createRange();
+                        range.selectNodeContents(e.currentTarget);
+                        selection?.removeAllRanges();
+                        selection?.addRange(range);
+                      }
+                    }}
+                  >
                     {webhook.url}
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 flex items-center">
+                    <span className="bg-green-50 text-green-600 px-2 py-1 rounded-full text-xs font-medium mr-2">
+                      {webhook.active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span>Created on {formatDate(webhook.createdAt)}</span>
                   </div>
                 </div>
               </div>

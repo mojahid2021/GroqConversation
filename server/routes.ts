@@ -376,31 +376,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.body.user.id;
       const { originalname, path: filePath, size, mimetype } = req.file;
       
-      // Process PDF file
+      // Process file based on mimetype
       let content = "";
       try {
         const dataBuffer = fs.readFileSync(filePath);
-        const pdfData = await pdfParse(dataBuffer);
-        content = pdfData.text;
-      } catch (pdfError) {
-        console.error("PDF parsing error:", pdfError);
-        return res.status(400).json({ message: "Failed to parse PDF file" });
-      }
-      
-      try {
-        // Save document to storage
+        
+        // Process based on file type
+        if (mimetype === 'application/pdf') {
+          try {
+            const pdfData = await pdfParse(dataBuffer);
+            content = pdfData.text;
+          } catch (pdfError) {
+            console.error("PDF parsing error:", pdfError);
+            content = "PDF content extraction failed. The file was uploaded but content could not be processed.";
+          }
+        } else if (mimetype.startsWith('image/')) {
+          // For image files, we would normally use OCR here
+          // For now, we'll just acknowledge the image
+          content = `Image content uploaded (OCR processing would extract text from ${originalname})`;
+        } else {
+          // For other file types, store a placeholder
+          content = `Content from ${originalname} (file type: ${mimetype})`;
+        }
+        
+        // Save document to storage, even if processing failed
         const document = await storage.createDocument({
-          name: originalname, // Use original filename instead of generated one
+          name: originalname,
           userId,
           content,
           type: mimetype,
           size: Math.ceil(size / 1024) // Convert bytes to KB
         });
         
+        // Increment document achievement and check for badges
+        try {
+          const achievement = await storage.incrementUserAchievement(userId, 'documents');
+          
+          // If achievement was updated, check for badges
+          if (achievement) {
+            const count = achievement.count;
+            
+            // Check for document count milestones
+            const allBadges = await storage.getAllBadges();
+            const userBadges = await storage.getUserBadgesByUserId(userId);
+            
+            // Find document-related badges that the user is eligible for but doesn't have yet
+            const documentBadges = allBadges.filter(badge => 
+              badge.criteria === 'documents' && 
+              badge.threshold <= count &&
+              !userBadges.some(ub => ub.badgeId === badge.id)
+            );
+            
+            // Award new badges
+            for (const badge of documentBadges) {
+              await storage.createUserBadge({
+                userId,
+                badgeId: badge.id
+              });
+              console.log(`Awarded badge ${badge.name} to user ${userId}`);
+            }
+          }
+        } catch (achievementError) {
+          console.error('Failed to increment document achievement:', achievementError);
+        }
+        
         return res.status(201).json(document);
-      } catch (storageError) {
-        console.error("Storage error:", storageError);
-        return res.status(500).json({ message: "Failed to save document" });
+      } catch (processingError) {
+        console.error("Document processing error:", processingError);
+        return res.status(500).json({ message: "Failed to process document" });
       }
     } catch (error) {
       console.error("Document upload error:", error);
@@ -714,31 +757,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/messages', authenticate, async (req, res, next) => {
     const origEnd = res.end;
     res.end = function(chunk?: any, encoding?: any) {
-      // Check if the response status is 200 (Successful)
-      if (res.statusCode === 200 && req.body && req.body.user) {
+      // Check if the response status is 201 (Created)
+      if ((res.statusCode === 201 || res.statusCode === 200) && req.body && req.body.user) {
         // Increment the message achievement
         storage.incrementUserAchievement(req.body.user.id, 'messages')
-          .catch(error => console.error('Failed to increment message achievement:', error));
+          .catch(error => console.error('Failed to increment message achievement:', error))
+          .then(achievement => {
+            // Check for badge eligibility
+            if (achievement) {
+              const count = achievement.count;
+              
+              // Check for message count milestones
+              const checkForBadges = async () => {
+                try {
+                  const allBadges = await storage.getAllBadges();
+                  const userBadges = await storage.getUserBadgesByUserId(req.body.user.id);
+                  
+                  // Find message-related badges that the user is eligible for but doesn't have yet
+                  const messageBadges = allBadges.filter(badge => 
+                    badge.criteria === 'messages' && 
+                    badge.threshold <= count &&
+                    !userBadges.some(ub => ub.badgeId === badge.id)
+                  );
+                  
+                  // Award new badges
+                  for (const badge of messageBadges) {
+                    await storage.createUserBadge({
+                      userId: req.body.user.id,
+                      badgeId: badge.id
+                    });
+                    console.log(`Awarded badge ${badge.name} to user ${req.body.user.id}`);
+                  }
+                } catch (badgeError) {
+                  console.error('Error checking for badges:', badgeError);
+                }
+              };
+              
+              // Run badge check in the background
+              checkForBadges();
+            }
+          });
       }
       return origEnd.call(this, chunk, encoding);
     };
     next();
   });
 
-  // Track achievements when uploading documents
-  app.post('/api/documents', authenticate, upload.single('file'), async (req, res, next) => {
-    const origEnd = res.end;
-    res.end = function(chunk?: any, encoding?: any) {
-      // Check if the response status is 201 (Created)
-      if (res.statusCode === 201 && req.body && req.body.user) {
-        // Increment the document achievement
-        storage.incrementUserAchievement(req.body.user.id, 'documents')
-          .catch(error => console.error('Failed to increment document achievement:', error));
-      }
-      return origEnd.call(this, chunk, encoding);
-    };
-    next();
-  });
+  // Track achievements for documents is now integrated directly in the main document upload handler
 
   // Track achievements when creating API keys
   app.post('/api/api-keys', authenticate, async (req, res, next) => {

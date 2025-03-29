@@ -162,12 +162,31 @@ export default function Documents() {
                 {isLoading ? (
                   <div className="space-y-4">
                     {viewMode === "list" ? (
-                      <SkeletonDocument count={3} showProgress={true} />
+                      <div className="space-y-6">
+                        <SkeletonDocument count={3} showProgress={true} />
+                        <div className="flex items-center justify-center mt-6">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500">Loading documents...</p>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[1, 2, 3].map((i) => (
-                          <SkeletonCard key={i} showProgress={i === 1} progressValue={65} />
-                        ))}
+                      <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <SkeletonCard 
+                              key={i} 
+                              showProgress={i === 1 || i === 4} 
+                              progressValue={i === 1 ? 65 : i === 4 ? 82 : undefined}
+                              className="h-[160px]"
+                            />
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-center mt-6">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500">Loading your document library...</p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

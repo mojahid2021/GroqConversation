@@ -167,34 +167,57 @@ export function AdvancedDocumentUpload() {
     
     setIsProcessing(true);
     
-    // Simulate OCR/scanning progress
+    // Scan progress timer
     const scanInterval = setInterval(() => {
       setScanProgress(prev => {
-        if (prev >= 99) {
-          clearInterval(scanInterval);
-          return 99;
+        if (prev >= 96) {
+          return 96; // Don't stop the interval yet, but cap the visible progress
         }
-        return prev + 1;
+        return prev + 2;
       });
-    }, 50);
+    }, 100);
     
-    // Simulate upload progress
+    // Upload progress timer - a bit slower than scan to simulate network upload
     const uploadInterval = setInterval(() => {
       setUploadProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(uploadInterval);
-          return 95;
+        if (prev >= 92) {
+          return 92; // Cap the visible progress
         }
-        return prev + 1;
+        return prev + 3;
       });
-    }, 80);
+    }, 150);
     
-    // Slight delay to simulate processing
-    setTimeout(() => {
-      uploadMutation(file);
+    try {
+      // Process the file with realistic timing that shows processing steps
+      // Give a slight delay so UI shows some progress before upload
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Attempt the actual upload
+      await uploadMutation(file);
+      
+      // Set progress to 100% on success
+      setScanProgress(100);
+      setUploadProgress(100);
+      
+      // Clear intervals
       clearInterval(scanInterval);
       clearInterval(uploadInterval);
-    }, 3000);
+    } catch (error) {
+      // Error handling with visual feedback
+      clearInterval(scanInterval);
+      clearInterval(uploadInterval);
+      
+      // Set progress to indicate failure
+      setScanProgress(prev => Math.min(prev, 98));
+      setUploadProgress(prev => Math.min(prev, 50));
+      
+      // Display error via toast (already handled in the mutation error callback)
+      
+      // Reset processing state but keep the file for retry
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 500);
+    }
   };
   
   return (
